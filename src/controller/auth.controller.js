@@ -1,5 +1,6 @@
 const User = require('../models/user.model')
 const otpModel = require('../models/otp.model')
+const Session = require('../models/session.models')
 const SendGenOtp = require('../utils/utils')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
@@ -25,11 +26,13 @@ async function register(req,res) {
         email,
         user : user._id,
         otpHash,
+        otptest:otp,
         expiresAt :new Date(Date.now() + 10 * 60 * 1000)
     })
 
     return res.status(200).json({msg : 'User Created Succefully',user,otp})
 }
+
 
 
 
