@@ -51,12 +51,42 @@ async function verifyEmail(req,res) {
     await otpModel.deleteMany({
         email : otpdoc.email
     })
+
+    const refreshToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+    },process.env.JWT_SECRET,{
+        expiresIn : '7d'
+    })
+    const refreshTokenHash = crypto.createHash("md5").update(refreshToken).digest("hex")
+    const session = await Session.create({
+        user : user._id,
+        refreshTokenHash,
+        ip : req.ip,
+        usergent : req.headers['user-agent']
+    })
+    const accessToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+        sessionid : session._id,
+    },process.env.JWT_SECRET,{expiresIn : '15m'})
+
+    res.cookie("refreshToken",refreshToken,{
+    httpOnly : true,
+    secure : true,
+    sameSite : "strict",    
+    maxAge : 7 * 24 * 60 * 60 * 1000
+    })
+
     return res.status(200).json({
         msg: "User Verifed",
         username : user.username,
-        email :  user.email
+        email :  user.email,
+        refreshToken,
+        accessToken
     })
 }
+
 
 
 module.exports = {
