@@ -12,7 +12,8 @@ const otpShema = new mongoose.Schema({
     },
     otpHash: {
         type : String,
-        required : [true,"otpHash  is required"]
+        required : [true,"otpHash  is required"],
+        
     },
     otptest:{
         type : String,
@@ -25,6 +26,4 @@ const otpShema = new mongoose.Schema({
 
 const otpModel = mongoose.model('otpModel',otpShema)
 module.exports = otpModel
-
-
 
