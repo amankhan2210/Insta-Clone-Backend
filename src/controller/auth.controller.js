@@ -10,9 +10,25 @@ async function register(req,res) {
     const{username,email,password} = req.body
     const isUserAlreadyExits = await User.findOne({email})
     if(isUserAlreadyExits){
-        return res.status(409).json({
-            msg : "User Already exits"
-        })
+        if(!isUserAlreadyExits.isVerified){
+            const hashedPassword = await bcrypt.hash(password,10)
+            const user = await User.findByIdAndUpdate({_id : isUserAlreadyExits._id},{
+                username:username,
+                password:hashedPassword
+            })
+            await otpModel.deleteMany({email})
+            const otp = await SendGenOtp(email,username)
+            const otpHash = await bcrypt.hash(otp,10)
+            await otpModel.create({
+                email,
+                user : user._id,
+                otpHash,
+                otptest:otp,
+                expiresAt :new Date(Date.now() + 10 * 60 * 1000)
+            })
+            return res.status(200).json({msg : 'Otp Send Done',user,otp})
+        }
+        return res.status(409).json({msg : "User Already exits"})
     }
     const hashedPassword = await bcrypt.hash(password,10)
     const user  = await User.create({
@@ -29,7 +45,6 @@ async function register(req,res) {
         otptest:otp,
         expiresAt :new Date(Date.now() + 10 * 60 * 1000)
     })
-
     return res.status(200).json({msg : 'User Created Succefully',user,otp})
 }
 
