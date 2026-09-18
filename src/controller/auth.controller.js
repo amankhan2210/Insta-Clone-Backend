@@ -147,9 +147,47 @@ async function login(req,res){
 
 }
 
+async function rotatetoken(req,res) {
+    // const refreshToken = req.cookies.refreshToken
+    const { refreshToken } = req.body
+    if(!refreshToken) return res.status(401).json({msg : " Token  not found"})
+    try {
+        const rhash = crypto.createHash("md5").update(refreshToken).digest("hex")
+        const session = await Session.findOne({refreshTokenHash:rhash,revoked:false})
+        if(!session) return res.status(401).json({msg:"session not found"})
+        const decoded = jwt.verify(refreshToken,process.env.JWT_SECRET)
+        const user = await User.findById(decoded.id)
+        const accessToken = jwt.sign({
+            id : user._id,
+            sessionid : session._id,
+            email : user.email,
+        },process.env.JWT_SECRET,{
+          expiresIn : '15m'
+        })
+        const newrefreshToken = jwt.sign({
+            id : user._id,
+            email : user.email,
+        },process.env.JWT_SECRET,{
+        expiresIn : '7d'
+        })
+        const nrhash = crypto.createHash("md5").update(newrefreshToken).digest("hex")
+        session.refreshTokenHash =nrhash
+        await session.save()
+        res.cookie("refreshToken",newrefreshToken,{
+        httpOnly : true,
+        secure : true,
+        sameSite : "strict",
+        maxAge : 7 * 24 * 60 * 60 * 1000
+        })
+        return res.status(200).json({accessToken,newrefreshToken})   
+    } catch (error) {
+        return res.status(401).json({msg : "wrong access token"})
+    }
+}
 
 module.exports = {
     register,
     verifyEmail,
-    login
+    login,
+    rotatetoken
 }
