@@ -128,7 +128,7 @@ async function login(req,res){
         id : user._id,
         email : user.email,
         sessionid : session._id,
-    },process.env.JWT_SECRET,{expiresIn : '15m'})
+    },process.env.JWT_SECRET,{expiresIn : '1m'})
 
     res.cookie("refreshToken",refreshToken,{
     httpOnly : true,
@@ -162,7 +162,7 @@ async function rotatetoken(req,res) {
             sessionid : session._id,
             email : user.email,
         },process.env.JWT_SECRET,{
-          expiresIn : '15m'
+          expiresIn : '1m'
         })
         const newrefreshToken = jwt.sign({
             id : user._id,
