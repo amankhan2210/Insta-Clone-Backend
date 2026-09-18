@@ -102,9 +102,54 @@ async function verifyEmail(req,res) {
     })
 }
 
+async function login(req,res){
+    const {email,password} = req.body
+    const user = await User.findOne({email})
+    if(!user || !user.isVerified ) return res.status(404).json({msg:'User Not Found'})
+    console.log(user.password,password)
+    const isMatch = await bcrypt.compare(password,user.password)
+    if(!isMatch) {return res.status(409).json({msg : "Invalid password"})}
+    const refreshToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+    },process.env.JWT_SECRET,{
+        expiresIn : '7d'
+    })
+    const refreshTokenHash = crypto.createHash("md5").update(refreshToken).digest("hex")
+
+    const session = await Session.create({
+    user : user._id,
+    refreshTokenHash,
+    ip : req.ip,
+    usergent : req.headers['user-agent']
+    })
+
+    const accessToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+        sessionid : session._id,
+    },process.env.JWT_SECRET,{expiresIn : '15m'})
+
+    res.cookie("refreshToken",refreshToken,{
+    httpOnly : true,
+    secure : true,
+    sameSite : "strict",    
+    maxAge : 7 * 24 * 60 * 60 * 1000
+    })
+
+    return res.status(200).json({
+        msg: "Loggedin-done",
+        username : user.username,
+        email :  user.email,
+        refreshToken,
+        accessToken
+    })
+
+}
 
 
 module.exports = {
     register,
-    verifyEmail
+    verifyEmail,
+    login
 }
