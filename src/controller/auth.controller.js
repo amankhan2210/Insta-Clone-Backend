@@ -185,9 +185,15 @@ async function rotatetoken(req,res) {
     }
 }
 
+async function feed(req,res) {
+    const user = await User.findById(req.user.id).select('-password')
+    return res.status(200).json({msg:"working",user})
+}
+
 module.exports = {
     register,
     verifyEmail,
     login,
-    rotatetoken
+    rotatetoken,
+    feed
 }
