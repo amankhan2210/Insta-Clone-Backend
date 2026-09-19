@@ -148,8 +148,8 @@ async function login(req,res){
 }
 
 async function rotatetoken(req,res) {
-    // const refreshToken = req.cookies.refreshToken
-    const { refreshToken } = req.body
+    const refreshToken = req.cookies.refreshToken
+    // const { refreshToken } = req.body
     if(!refreshToken) return res.status(401).json({msg : " Token  not found"})
     try {
         const rhash = crypto.createHash("md5").update(refreshToken).digest("hex")
