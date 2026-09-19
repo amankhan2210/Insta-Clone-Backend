@@ -198,10 +198,19 @@ async function logout(req,res) {
     return res.status(200).json({msg : "Logout-Successfully"})
 }
 
-async function feed(req,res) {
-    const user = await User.findById(req.user.id).select('-password')
-    return res.status(200).json({msg:"working",user})
+
+async function logoutall(req,res) {
+    const refreshToken = req.cookies.refreshToken
+    if(!refreshToken) return res.status(401).json({msg : " Token  not found"})
+    try{
+        await Session.updateMany({user : req.user.id, revoked:false},{revoked:true})
+    }
+    catch (error) {  return res.status(401).json({msg : "Session-issues or wrong Token "})  }
+    res.clearCookie("refreshToken")
+    return res.status(200).json({msg : "logout-all-done"})
 }
+
+
 
 module.exports = {
     register,
@@ -209,5 +218,5 @@ module.exports = {
     login,
     rotatetoken,
     logout,
-    feed
+    logoutall,
 }

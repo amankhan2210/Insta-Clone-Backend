@@ -8,6 +8,7 @@ authRouter.post('/emailverify',authController.verifyEmail)
 authRouter.post('/login',authController.login)
 authRouter.post('/refreshtoken',authController.rotatetoken)
 authRouter.get('/logout',authMiddleware,authController.logout)
-authRouter.get('/feed',authMiddleware,authController.feed)
+authRouter.get('/logoutall',authMiddleware,authController.logoutall)
+
 
 module.exports = authRouter
