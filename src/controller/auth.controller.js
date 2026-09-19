@@ -185,6 +185,19 @@ async function rotatetoken(req,res) {
     }
 }
 
+async function logout(req,res) {
+    // const { refreshToken } = req.body
+    const refreshToken = req.cookies.refreshToken
+    if(!refreshToken) return res.status(401).json({msg : "Invalid token or not found"})
+    const rhash = crypto.createHash("md5").update(refreshToken).digest("hex")
+    const session = await Session.findOne({refreshTokenHash:rhash,revoked:false})
+    if(!session) return res.status(401).json({msg : "Invalid token Session not found"})
+    session.revoked = true
+    await session.save()
+    res.clearCookie('refreshToken')
+    return res.status(200).json({msg : "Logout-Successfully"})
+}
+
 async function feed(req,res) {
     const user = await User.findById(req.user.id).select('-password')
     return res.status(200).json({msg:"working",user})
@@ -195,5 +208,6 @@ module.exports = {
     verifyEmail,
     login,
     rotatetoken,
+    logout,
     feed
 }
