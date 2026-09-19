@@ -102,9 +102,121 @@ async function verifyEmail(req,res) {
     })
 }
 
+async function login(req,res){
+    const {email,password} = req.body
+    const user = await User.findOne({email})
+    if(!user || !user.isVerified ) return res.status(404).json({msg:'User Not Found'})
+    console.log(user.password,password)
+    const isMatch = await bcrypt.compare(password,user.password)
+    if(!isMatch) {return res.status(409).json({msg : "Invalid password"})}
+    const refreshToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+    },process.env.JWT_SECRET,{
+        expiresIn : '7d'
+    })
+    const refreshTokenHash = crypto.createHash("md5").update(refreshToken).digest("hex")
+
+    const session = await Session.create({
+    user : user._id,
+    refreshTokenHash,
+    ip : req.ip,
+    usergent : req.headers['user-agent']
+    })
+
+    const accessToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+        sessionid : session._id,
+    },process.env.JWT_SECRET,{expiresIn : '1m'})
+
+    res.cookie("refreshToken",refreshToken,{
+    httpOnly : true,
+    secure : true,
+    sameSite : "strict",    
+    maxAge : 7 * 24 * 60 * 60 * 1000
+    })
+
+    return res.status(200).json({
+        msg: "Loggedin-done",
+        username : user.username,
+        email :  user.email,
+        refreshToken,
+        accessToken
+    })
+
+}
+
+async function rotatetoken(req,res) {
+    const refreshToken = req.cookies.refreshToken
+    // const { refreshToken } = req.body
+    if(!refreshToken) return res.status(401).json({msg : " Token  not found"})
+    try {
+        const rhash = crypto.createHash("md5").update(refreshToken).digest("hex")
+        const session = await Session.findOne({refreshTokenHash:rhash,revoked:false})
+        if(!session) return res.status(401).json({msg:"session not found"})
+        const decoded = jwt.verify(refreshToken,process.env.JWT_SECRET)
+        const user = await User.findById(decoded.id)
+        const accessToken = jwt.sign({
+            id : user._id,
+            sessionid : session._id,
+            email : user.email,
+        },process.env.JWT_SECRET,{
+          expiresIn : '1m'
+        })
+        const newrefreshToken = jwt.sign({
+            id : user._id,
+            email : user.email,
+        },process.env.JWT_SECRET,{
+        expiresIn : '7d'
+        })
+        const nrhash = crypto.createHash("md5").update(newrefreshToken).digest("hex")
+        session.refreshTokenHash =nrhash
+        await session.save()
+        res.cookie("refreshToken",newrefreshToken,{
+        httpOnly : true,
+        secure : true,
+        sameSite : "strict",
+        maxAge : 7 * 24 * 60 * 60 * 1000
+        })
+        return res.status(200).json({accessToken,newrefreshToken})   
+    } catch (error) {
+        return res.status(401).json({msg : "wrong access token"})
+    }
+}
+
+async function logout(req,res) {
+    // const { refreshToken } = req.body
+    const refreshToken = req.cookies.refreshToken
+    if(!refreshToken) return res.status(401).json({msg : "Invalid token or not found"})
+    const rhash = crypto.createHash("md5").update(refreshToken).digest("hex")
+    const session = await Session.findOne({refreshTokenHash:rhash,revoked:false})
+    if(!session) return res.status(401).json({msg : "Invalid token Session not found"})
+    session.revoked = true
+    await session.save()
+    res.clearCookie('refreshToken')
+    return res.status(200).json({msg : "Logout-Successfully"})
+}
+
+
+async function logoutall(req,res) {
+    const refreshToken = req.cookies.refreshToken
+    if(!refreshToken) return res.status(401).json({msg : " Token  not found"})
+    try{
+        await Session.updateMany({user : req.user.id, revoked:false},{revoked:true})
+    }
+    catch (error) {  return res.status(401).json({msg : "Session-issues or wrong Token "})  }
+    res.clearCookie("refreshToken")
+    return res.status(200).json({msg : "logout-all-done"})
+}
+
 
 
 module.exports = {
     register,
-    verifyEmail
+    verifyEmail,
+    login,
+    rotatetoken,
+    logout,
+    logoutall,
 }
