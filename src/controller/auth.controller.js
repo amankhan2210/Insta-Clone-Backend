@@ -2,6 +2,7 @@ const User = require('../models/user.model')
 const otpModel = require('../models/otp.model')
 const rpotpModel = require('../models/rp.otp.model')
 const Session = require('../models/session.models')
+const Profile = require('../models/profile.model')
 const SendGenOtp = require('../utils/utils')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
@@ -64,6 +65,7 @@ async function verifyEmail(req,res) {
         return res.status(409).json({msg : "Otp Invalid"})
     }
     const user = await User.findByIdAndUpdate(otpdoc.user,{isVerified:true})
+    await Profile.create({user:user._id})
     await otpModel.deleteMany({
         email : otpdoc.email
     })
@@ -129,7 +131,7 @@ async function login(req,res){
         id : user._id,
         email : user.email,
         sessionid : session._id,
-    },process.env.JWT_SECRET,{expiresIn : '1m'})
+    },process.env.JWT_SECRET,{expiresIn : '15m'})
 
     res.cookie("refreshToken",refreshToken,{
     httpOnly : true,
