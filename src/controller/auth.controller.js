@@ -1,5 +1,6 @@
 const User = require('../models/user.model')
 const otpModel = require('../models/otp.model')
+const rpotpModel = require('../models/rp.otp.model')
 const Session = require('../models/session.models')
 const SendGenOtp = require('../utils/utils')
 const bcrypt = require('bcrypt')
@@ -210,7 +211,47 @@ async function logoutall(req,res) {
     return res.status(200).json({msg : "logout-all-done"})
 }
 
+async function Forgotpassword(req,res) {
+    const {email} = req.body
+    const user = await User.findOne({email})
+    if(!user || !user.isVerified) return res.status(400).json({msg:'User not found'})
+    const otp = await SendGenOtp(email,user.username)
+    const otpHash = await bcrypt.hash(otp,10)
+    await rpotpModel.create({
+    email,
+    user : user._id,
+    otpHash,
+    otptest:otp,
+    expiresAt :new Date(Date.now() + 10 * 60 * 1000)
+    })
+    return res.status(200).json({msg: 'Otp-send-SuccessFully'})
+}
 
+async function verifyOtp(req,res) {
+    const {email,otp} = req.body
+    const otpdoc = await rpotpModel.findOne({email})
+    if(!otpdoc) return res.status(400).json({msg:'Invalid otp'})
+    if(otpdoc.expiresAt < new Date()){
+        await rpotpModel.deleteMany({email : otpdoc.email})
+        return res.status(409).json({msg : "Otp expired"})
+    }
+    const isMatch = await bcrypt.compare(otp,otpdoc.otpHash)
+    if(!isMatch) return res.status(400).json({msg:'Invalid Otp'})
+    await rpotpModel.deleteMany({email:otpdoc.email})
+    const user = await User.findOne({email})
+    const resetToken = jwt.sign({
+        id : user._id,
+        email : user.email,
+    },process.env.JWT_SECRET2,{expiresIn : '5m'})
+    return res.status(200).json({msg : "Otp verifed Successfully",resetToken})
+}
+
+async function resetPassword(req,res) {
+    const {password} = req.body
+    const hashedPassword = await bcrypt.hash(password,10)
+    await User.findByIdAndUpdate({_id:req.user.id},{password:hashedPassword})
+    return res.status(200).json({msg : 'Passowrd Updated SuccessFully'})
+}
 
 module.exports = {
     register,
@@ -219,4 +260,7 @@ module.exports = {
     rotatetoken,
     logout,
     logoutall,
+    Forgotpassword,
+    verifyOtp,
+    resetPassword
 }
