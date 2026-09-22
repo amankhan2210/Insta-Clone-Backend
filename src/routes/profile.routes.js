@@ -1,0 +1,20 @@
+const express = require("express")
+const profileRouter = express.Router()
+const profileController = require("../controller/profile.controller")
+const authMiddleware = require("../middleware/auth.middleware")
+const uploadMiddleware = require('../middleware/upload.middleware')
+
+profileRouter.get("/getmyprofile",authMiddleware,profileController.getProfile)
+profileRouter.get("/getprofile/:id",authMiddleware,profileController.getProfileById)
+profileRouter.patch("/update",authMiddleware,profileController.UpdateProfile)
+profileRouter.patch("/updateavatar",uploadMiddleware.single("file"),authMiddleware,profileController.UpdateProfileAvatar)
+profileRouter.delete("/deleteavatar",authMiddleware,profileController.deletavtar)
+profileRouter.patch("/toggleprivacy",authMiddleware,profileController.publictoggle)
+profileRouter.post("/follow/:id",authMiddleware,profileController.follow)
+profileRouter.delete("/unfollow/:id",authMiddleware,profileController.unfollowOrDeletRequest)
+profileRouter.patch("/acceptfollow/:id",authMiddleware,profileController.acceptFollowRequest)
+profileRouter.get("/listpending",authMiddleware,profileController.listPendingRequest)
+profileRouter.get("/listfollowers",authMiddleware,profileController.listFollowers)
+profileRouter.get("/listfollowing",authMiddleware,profileController.listFollowing)
+
+module.exports = profileRouter

@@ -25,6 +25,11 @@ const profileSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
+    gender :{
+      type : String,
+      enum: ["male", "female", "other", "prefer_not_to_say"],
+      default: "prefer_not_to_say"
+    },
     followersCount: {
       type: Number,
       default: 0,
