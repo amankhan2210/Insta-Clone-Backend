@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const Follow = require('../models/follow.model')
 const uploadToCloudinary = require('../utils/uploadToCloudinary')
 const cloudinary = require('../configs/cloudinary')
+
 async function getProfile(req,res){
     const profile = await Profile.findOne({user:req.user.id})
     if(!profile) return res.status(404).json({msg : "Profile not found"})
@@ -144,6 +145,7 @@ async function listFollowing(req,res) {
     if(!following || following.length === 0) return res.status(404).json({msg : "No following found"})
     return res.status(200).json({msg : "Following fetched successfully",following})
 }
+
 
 module.exports = {
     UpdateProfile,
